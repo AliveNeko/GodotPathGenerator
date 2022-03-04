@@ -27,7 +27,7 @@ Todo:
 
 这样就可以使用IDE自动补全，而不是手写字符串
 
-Tips:
+提示:
 * 只有有C#脚本的节点才会被生成
 * 默认生成的文件路径是 res://script/gpg, 可以直接修改GodotPathGenerator类来改变
 
