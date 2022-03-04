@@ -1,5 +1,6 @@
 # GodotPathGenerator
 A godot plugin which can generate node path, so that you don't need to write literal string anymore.
+*Write by C# but easy to transplant to gdscript.*
 
 Example:
 
