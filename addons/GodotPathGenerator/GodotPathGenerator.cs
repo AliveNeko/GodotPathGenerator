@@ -1,5 +1,4 @@
 using Godot;
-using System;
 using System.Collections.Generic;
 using System.Text.RegularExpressions;
 using static Godot.GD;
@@ -8,11 +7,10 @@ using static Godot.GD;
 public class GodotPathGenerator : EditorPlugin
 {
     private const string PluginName = "GodotPathGenerator";
-    private const string DirPath = "res://script";
-    private const string FileName = "GPG.cs";
-    private const string FilePath = DirPath + "/" + FileName;
 
     private const string ClassNameRegex = "(?<=[//|\\.])(@*[a-zA-Z0-9]+)(?=\\.cs$)";
+    
+    private string _dirPath = "res://script/gpg";
 
     private EditorInterface _editor;
 
@@ -73,95 +71,53 @@ public class GodotPathGenerator : EditorPlugin
 
     private void StartGeneratePath(string className, List<string> pathList)
     {
+        string fileName = $"{className}Path.cs";
+        string filePath = _dirPath + "/" + fileName;
+
         var scriptDir = new Directory();
         var file = new File();
         try
         {
-            if (!scriptDir.DirExists(DirPath))
+            if (!scriptDir.DirExists(_dirPath))
             {
-                if (scriptDir.MakeDir(DirPath) != Error.Ok)
+                if (scriptDir.MakeDirRecursive(_dirPath) != Error.Ok)
                 {
-                    PrintErr($"{PluginName}: can't create '{DirPath}' dir");
+                    PrintErr($"{PluginName}: can't create '{_dirPath}' dir");
                     return;
                 }
             }
 
-            if (scriptDir.Open(DirPath) == Error.Ok)
+            if (scriptDir.Open(_dirPath) == Error.Ok)
             {
-                bool isNew = false;
-                if (!file.FileExists(FilePath))
+                if (file.Open(filePath, File.ModeFlags.Write) != Error.Ok)
                 {
-                    if (file.Open(FilePath, File.ModeFlags.Write) != Error.Ok)
-                    {
-                        PrintErr($"{PluginName}: can't create file '{FilePath}'");
-                    }
-
-                    file.StoreString("");
-                    isNew = true;
-                    file.Close();
+                    PrintErr($"{PluginName}: can't create file '{filePath}'");
+                    return;
                 }
+                
+                file.StoreString("/// <summary>");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("/// Don't modify this file, let plugin update it");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("/// Created by GodotPathGenerator");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("/// </summary>");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("public static partial class GPG");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("{");
+                file.StoreString(System.Environment.NewLine);
 
-                if (isNew)
-                {
-                    if (file.Open(FilePath, File.ModeFlags.Write) != Error.Ok)
-                    {
-                        PrintErr($"{PluginName}: can't write file '{FilePath}'");
-                        return;
-                    }
+                WriteOneClass(file, className, pathList);
 
-                    file.StoreString("/// <summary>");
-                    file.StoreString(System.Environment.NewLine);
-                    file.StoreString("/// Don't modify this file, let plugin update it");
-                    file.StoreString(System.Environment.NewLine);
-                    file.StoreString("/// Created by GodotPathGenerator");
-                    file.StoreString(System.Environment.NewLine);
-                    file.StoreString("/// </summary>");
-                    file.StoreString(System.Environment.NewLine);
-                    file.StoreString("public static class GPG");
-                    file.StoreString(System.Environment.NewLine);
-                    file.StoreString("{");
-                    file.StoreString(System.Environment.NewLine);
+                file.StoreString("}");
+                file.Flush();
 
-                    WriteOneClass(file, className, pathList);
-
-                    file.StoreString("}");
-
-                    file.Close();
-                }
-                else
-                {
-                    if (file.Open(FilePath, File.ModeFlags.Read) != Error.Ok)
-                    {
-                        PrintErr($"{PluginName}: can't read file '{FilePath}'");
-                        return;
-                    }
-
-                    var text = file.GetAsText();
-                    var lines = text.Split(System.Environment.NewLine);
-
-                    int state = 0;
-
-                    for (var i = 0; i < lines.Length; i++)
-                    {
-                        var line = lines[i];
-
-                        if (IsBlank(line))
-                        {
-                            continue;
-                        }
-
-                        if (i <= 6)
-                        {
-                            state = 1;
-                            continue;
-                        }
-
-                    }
-                }
+                file.Close();
             }
             else
             {
-                PrintErr($"{PluginName}: can't open '{DirPath}' dir");
+                PrintErr($"{PluginName}: can't open '{_dirPath}' dir");
             }
         }
         finally
@@ -171,11 +127,6 @@ public class GodotPathGenerator : EditorPlugin
                 file.Close();
             }
         }
-    }
-
-    private bool IsBlank(string str)
-    {
-        return string.IsNullOrEmpty(str) || str.Trim().Length == 0;
     }
 
     private void WriteOneClass(File file, string className, List<string> pathList)
@@ -189,11 +140,10 @@ public class GodotPathGenerator : EditorPlugin
         {
             var fieldName = path.Replace("/", "_");
 
-            file.StoreString($"        public const string {fieldName} = \"{path}\";");
+            file.StoreString($"        public const string {fieldName} = \"/root{path}\";");
             file.StoreString(System.Environment.NewLine);
         }
 
-        file.StoreString(System.Environment.NewLine);
         file.StoreString("    }");
         file.StoreString(System.Environment.NewLine);
     }
