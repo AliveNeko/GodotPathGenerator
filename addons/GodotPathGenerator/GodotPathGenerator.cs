@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using static Godot.GD;
 
+#if TOOLS
 [Tool]
 public class GodotPathGenerator : EditorPlugin
 {
@@ -35,23 +36,23 @@ public class GodotPathGenerator : EditorPlugin
         FileSystemDock fileSystemDock = _editor.GetFileSystemDock();
 
         fileSystem.Connect("filesystem_changed", this, nameof(OnFilesystemChanged));
-        
+
         fileSystemDock.Connect("files_moved", this, nameof(OnFilesMoved));
         fileSystemDock.Connect("file_removed", this, nameof(OnFileRemoved));
         fileSystemDock.Connect("folder_removed", this, nameof(OnFolderRemoved));
 
         Print($"{PluginName}: Start Plugin");
     }
-    
+
     private void OnFilesystemChanged()
     {
         CreateEditingSceneNodePath();
-        
+
 #if DEBUG
         Print("OnFilesystemChanged");
 #endif
     }
-    
+
     #region create node path
 
     /// <summary>
@@ -61,12 +62,12 @@ public class GodotPathGenerator : EditorPlugin
     {
         Node root = _editor.GetEditedSceneRoot();
         if (root == null) return;
-        
+
         if (root.Name == _lastChange.Item1 && (DateTime.Now - _lastChange.Item2).Milliseconds < 100)
         {
             return;
         }
-            
+
         var reference = root.GetScript();
 
         if (reference is CSharpScript script && _dir.FileExists(script.ResourcePath))
@@ -78,10 +79,10 @@ public class GodotPathGenerator : EditorPlugin
             {
                 var nameMatch = matchCollection[0];
                 var pathList = new List<string>();
-                    
+
                 TraversalChildren("", root, pathList);
                 var generated = StartGeneratePath(nameMatch.ToString(), pathList);
-                    
+
                 if (generated)
                 {
                     if (_generatedFilePath.ContainsKey(resourcePath))
@@ -92,6 +93,7 @@ public class GodotPathGenerator : EditorPlugin
                     {
                         _generatedFilePath.Add(resourcePath, nameMatch.ToString());
                     }
+
                     Print($"{PluginName}: generated node path");
                 }
             }
@@ -108,7 +110,7 @@ public class GodotPathGenerator : EditorPlugin
 
         var children = start.GetChildren();
         if (children == null || children.Count <= 0) return;
-        
+
         foreach (var child in children)
         {
             if (child is Node node)
@@ -229,14 +231,14 @@ public class GodotPathGenerator : EditorPlugin
                 {
                     return;
                 }
-                
+
                 string oldPath = $"{DirPath}/{oldClassNameMatch}Path.cs";
                 string newPath = $"{DirPath}/{newClassNameMatch}Path.cs";
-                
+
                 _dir.Rename(oldPath, newPath);
             }
         }
-        
+
 #if DEBUG
         Print($"OnFilesMoved; oldFile: {oldFile}, newFile: {newFile}");
 #endif
@@ -252,7 +254,7 @@ public class GodotPathGenerator : EditorPlugin
             RemovePathFileByClassName(_generatedFilePath[scriptPath]);
             _generatedFilePath.Remove(scriptPath);
         }
-        
+
 #if DEBUG
         Print($"OnFolderRemoved; folder: {folder}");
 #endif
@@ -272,5 +274,5 @@ public class GodotPathGenerator : EditorPlugin
             }
         }
     }
-    
 }
+#endif
