@@ -1,3 +1,4 @@
+#if TOOLS
 #define DEBUG
 
 using System;
@@ -7,7 +8,6 @@ using System.Linq;
 using System.Text.RegularExpressions;
 using static Godot.GD;
 
-#if TOOLS
 [Tool]
 public class GodotPathGenerator : EditorPlugin
 {
