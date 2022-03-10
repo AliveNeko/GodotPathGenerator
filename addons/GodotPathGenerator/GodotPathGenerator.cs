@@ -1,5 +1,5 @@
 #if TOOLS
-#define DEBUG
+#define TOOL_DEBUG
 
 using System;
 using Godot;
@@ -20,10 +20,24 @@ public class GodotPathGenerator : EditorPlugin
     private EditorInterface _editor;
 
     /// <summary>
+    /// Generated node path
     /// key: script path
     /// value: class name
     /// </summary>
     private readonly Dictionary<string, string> _generatedFilePath = new Dictionary<string, string>();
+
+    /// <summary>
+    /// Generated resource path
+    /// </summary>
+    private readonly HashSet<string> _generatedResPath = new HashSet<string>();
+
+    /// <summary>
+    /// types will be generated in Res.cs
+    /// </summary>
+    private readonly HashSet<string> _resGenerateType = new HashSet<string>
+    {
+        ".tscn",
+    };
 
     private readonly Directory _dir = new Directory();
 
@@ -48,7 +62,7 @@ public class GodotPathGenerator : EditorPlugin
     {
         CreateEditingSceneNodePath();
 
-#if DEBUG
+#if TOOL_DEBUG
         Print("OnFilesystemChanged");
 #endif
     }
@@ -56,7 +70,7 @@ public class GodotPathGenerator : EditorPlugin
     #region create node path
 
     /// <summary>
-    /// 创建当前正在编辑的场景的路径
+    /// Create the path of the scene you are currently editing
     /// </summary>
     private void CreateEditingSceneNodePath()
     {
@@ -70,7 +84,9 @@ public class GodotPathGenerator : EditorPlugin
 
         var reference = root.GetScript();
 
-        if (reference is CSharpScript script && _dir.FileExists(script.ResourcePath))
+        if (reference is CSharpScript script
+            && _dir.FileExists(script.ResourcePath)
+            && _dir.FileExists(root.Filename))
         {
             var resourcePath = script.ResourcePath;
             var matchCollection = Regex.Matches(resourcePath, ClassNameRegex);
@@ -92,6 +108,12 @@ public class GodotPathGenerator : EditorPlugin
                     else
                     {
                         _generatedFilePath.Add(resourcePath, nameMatch.ToString());
+                    }
+
+                    if (ShouldGenerate(root.Filename))
+                    {
+                        _generatedResPath.Add(root.Filename);
+                        GenerateResPath();
                     }
 
                     Print($"{PluginName}: generated node path");
@@ -202,6 +224,8 @@ public class GodotPathGenerator : EditorPlugin
 
     #endregion
 
+    #region file move and remove
+
     public void OnFileRemoved(string filePath)
     {
         if (_generatedFilePath.ContainsKey(filePath))
@@ -211,7 +235,14 @@ public class GodotPathGenerator : EditorPlugin
 
             _generatedFilePath.Remove(filePath);
         }
-#if DEBUG
+
+        if (_generatedResPath.Contains(filePath))
+        {
+            _generatedResPath.Remove(filePath);
+            GenerateResPath();
+        }
+        
+#if TOOL_DEBUG
         Print($"OnFileRemoved; filePath: {filePath}");
 #endif
     }
@@ -238,8 +269,15 @@ public class GodotPathGenerator : EditorPlugin
                 _dir.Rename(oldPath, newPath);
             }
         }
+        
+        if (_generatedResPath.Contains(oldFile) && !_generatedResPath.Contains(newFile))
+        {
+            _generatedResPath.Remove(oldFile);
+            _generatedResPath.Add(newFile);
+            GenerateResPath();
+        }
 
-#if DEBUG
+#if TOOL_DEBUG
         Print($"OnFilesMoved; oldFile: {oldFile}, newFile: {newFile}");
 #endif
     }
@@ -255,7 +293,13 @@ public class GodotPathGenerator : EditorPlugin
             _generatedFilePath.Remove(scriptPath);
         }
 
-#if DEBUG
+        if (_generatedResPath.RemoveWhere(path => path.StartsWith(folder)) > 0)
+        {
+            GenerateResPath();
+        }
+        
+
+#if TOOL_DEBUG
         Print($"OnFolderRemoved; folder: {folder}");
 #endif
     }
@@ -268,9 +312,99 @@ public class GodotPathGenerator : EditorPlugin
         {
             if (_dir.Remove(classPath) == Error.Ok)
             {
-#if DEBUG
+#if TOOL_DEBUG
                 Print($"{PluginName}: remove a node path file");
 #endif
+            }
+        }
+    }
+
+    #endregion
+
+
+    private bool ShouldGenerate(string resPath)
+    {
+        if (!_resGenerateType.Any(resPath.EndsWith))
+        {
+            return false;
+        }
+
+        return !_generatedResPath.Contains(resPath);
+    }
+
+    private bool GenerateResPath()
+    {
+        string fileName = "Res.cs";
+        string filePath = DirPath + "/" + fileName;
+
+        var file = new File();
+        try
+        {
+            if (!_dir.DirExists(DirPath))
+            {
+                if (_dir.MakeDirRecursive(DirPath) != Error.Ok)
+                {
+                    PrintErr($"{PluginName}: can't create '{DirPath}' dir");
+                    return false;
+                }
+            }
+
+            if (_dir.Open(DirPath) == Error.Ok)
+            {
+                if (file.Open(filePath, File.ModeFlags.Write) != Error.Ok)
+                {
+                    PrintErr($"{PluginName}: can't create file '{filePath}'");
+                    return false;
+                }
+
+                file.StoreString("/// <summary>");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("/// Don't modify this file, let plugin update it");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("/// Created by GodotPathGenerator");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("/// </summary>");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("public static partial class GPG");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("{");
+                file.StoreString(System.Environment.NewLine);
+
+                file.StoreString("    public static class Res");
+                file.StoreString(System.Environment.NewLine);
+                file.StoreString("    {");
+                file.StoreString(System.Environment.NewLine);
+
+                foreach (var path in _generatedResPath)
+                {
+                    var fieldName = path.Replace("res:/", "")
+                        .Replace(".", "_")
+                        .Replace("/", "_");
+
+                    file.StoreString($"        public const string {fieldName} = \"{path}\";");
+                    file.StoreString(System.Environment.NewLine);
+                }
+
+                file.StoreString("    }");
+                file.StoreString(System.Environment.NewLine);
+
+                file.StoreString("}");
+                file.Flush();
+
+                file.Close();
+                return true;
+            }
+            else
+            {
+                PrintErr($"{PluginName}: can't open '{DirPath}' dir");
+                return false;
+            }
+        }
+        finally
+        {
+            if (file.IsOpen())
+            {
+                file.Close();
             }
         }
     }
