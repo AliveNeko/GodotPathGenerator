@@ -7,7 +7,7 @@ Example:
 
 ![example](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgExample.png)
 
-![example2](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgResExample.png)
+![example2](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgRes2Example.png)
 
 use IDE autocomplate than string.
 
@@ -29,7 +29,7 @@ Todo:
 
 ![example](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgExample.png)
 
-![example2](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgResExample.png)
+![example2](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgRes2Example.png)
 
 这样就可以使用IDE自动补全，而不是手写字符串
 
