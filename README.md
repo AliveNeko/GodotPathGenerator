@@ -5,9 +5,9 @@ A godot plugin which can generate node path and scene resource path, so that you
 
 Example:
 
-![example](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgExample.png)
+![example](https://raw.githubusercontent.com/LiXin-Link/GodotPathGenerator/main/.github/images/gpgExample.png)
 
-![example2](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgRes2Example.png)
+![example2](https://raw.githubusercontent.com/LiXin-Link/GodotPathGenerator/main/.github/images/gpgResExample.png)
 
 use IDE autocomplate than string.
 
@@ -27,9 +27,9 @@ Todo:
 
 例子:
 
-![example](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgExample.png)
+![example](https://raw.githubusercontent.com/LiXin-Link/GodotPathGenerator/main/.github/images/gpgExample.png)
 
-![example2](https://raw.githubusercontent.com/LiXin-Link/lixin-link.github.io/main/picture/gpgRes2Example.png)
+![example2](https://raw.githubusercontent.com/LiXin-Link/GodotPathGenerator/main/.github/images/gpgResExample.png)
 
 这样就可以使用IDE自动补全，而不是手写字符串
 
